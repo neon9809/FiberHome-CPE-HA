@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import requests
+import logging
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
@@ -21,6 +22,8 @@ from .const import (
     MAX_REFRESH_INTERVAL,
     VALIDATION_NODES,
 )
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class CannotConnect(Exception):
@@ -133,7 +136,7 @@ class FiberhomeCPEOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
         """Initialize options flow."""
-        self.config_entry = config_entry
+        super().__init__(config_entry)
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -161,6 +164,7 @@ class FiberhomeCPEOptionsFlow(config_entries.OptionsFlow):
             except requests.RequestException:
                 errors["base"] = "cannot_connect"
             except Exception:
+                _LOGGER.exception("Unexpected error updating options")
                 errors["base"] = "unknown"
             else:
                 return self.async_create_entry(title="", data=user_input)
@@ -168,27 +172,47 @@ class FiberhomeCPEOptionsFlow(config_entries.OptionsFlow):
                 if client is not None:
                     await self.hass.async_add_executor_job(client.close)
 
+        host_default = self.config_entry.options.get(
+            CONF_HOST, self.config_entry.data.get(CONF_HOST, DEFAULT_HOST)
+        )
+        username_default = self.config_entry.options.get(
+            CONF_USERNAME, self.config_entry.data.get(CONF_USERNAME, "")
+        )
+        password_default = self.config_entry.options.get(
+            CONF_PASSWORD, self.config_entry.data.get(CONF_PASSWORD, "")
+        )
+        refresh_default = self.config_entry.options.get(
+            CONF_REFRESH_INTERVAL,
+            self.config_entry.data.get(CONF_REFRESH_INTERVAL, DEFAULT_REFRESH_INTERVAL),
+        )
+        enable_sms_default = self.config_entry.options.get(
+            CONF_ENABLE_LATEST_MESSAGE,
+            self.config_entry.data.get(
+                CONF_ENABLE_LATEST_MESSAGE, DEFAULT_ENABLE_LATEST_MESSAGE
+            ),
+        )
+
         data_schema = vol.Schema(
             {
                 vol.Required(
                     CONF_HOST, 
-                    default=self.config_entry.options.get(CONF_HOST, self.config_entry.data.get(CONF_HOST))
+                    default=host_default
                 ): str,
                 vol.Required(
                     CONF_USERNAME, 
-                    default=self.config_entry.options.get(CONF_USERNAME, self.config_entry.data.get(CONF_USERNAME))
+                    default=username_default
                 ): str,
                 vol.Required(
                     CONF_PASSWORD, 
-                    default=self.config_entry.options.get(CONF_PASSWORD, self.config_entry.data.get(CONF_PASSWORD))
+                    default=password_default
                 ): str,
                 vol.Required(
                     CONF_REFRESH_INTERVAL,
-                    default=self.config_entry.options.get(CONF_REFRESH_INTERVAL, self.config_entry.data.get(CONF_REFRESH_INTERVAL)),
+                    default=refresh_default,
                 ): vol.All(int, vol.Range(min=MIN_REFRESH_INTERVAL, max=MAX_REFRESH_INTERVAL)),
                 vol.Optional(
                     CONF_ENABLE_LATEST_MESSAGE,
-                    default=self.config_entry.options.get(CONF_ENABLE_LATEST_MESSAGE, self.config_entry.data.get(CONF_ENABLE_LATEST_MESSAGE)),
+                    default=enable_sms_default,
                 ): bool,
             }
         )

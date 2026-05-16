@@ -36,7 +36,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.data.get(CONF_ENABLE_LATEST_MESSAGE, DEFAULT_ENABLE_LATEST_MESSAGE)
     )
 
-    client = validated_clients.pop(entry.unique_id, None)
+    client = validated_clients.pop(entry.unique_id, None) if entry.unique_id else None
     if client is None:
         client = FiberhomeCPEClient(host, username, password)
     

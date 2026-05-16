@@ -181,7 +181,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     
     # Create sensors for each tracked data point
     for key, config in SENSOR_TYPES.items():
-        sensors.append(FiberhomeCPESensor(coordinator, key, config))
+        sensors.append(FiberhomeCPESensor(coordinator, entry, key, config))
 
     # Add the latest message sensor if enabled
     enable_sms = entry.options.get(
@@ -189,7 +189,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         entry.data.get(CONF_ENABLE_LATEST_MESSAGE, DEFAULT_ENABLE_LATEST_MESSAGE)
     )
     if enable_sms:
-        sensors.append(FiberhomeCPESMSMessageSensor(coordinator))
+        sensors.append(FiberhomeCPESMSMessageSensor(coordinator, entry))
 
     async_add_entities(sensors, True)
 
@@ -197,7 +197,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class FiberhomeCPESensor(CoordinatorEntity, SensorEntity):
     """Representation of a Fiberhome CPE Sensor."""
 
-    def __init__(self, coordinator, key, config):
+    def __init__(self, coordinator, entry, key, config):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._key = key
@@ -208,7 +208,7 @@ class FiberhomeCPESensor(CoordinatorEntity, SensorEntity):
         model = data.get("ModelName", "Fiberhome 5G CPE")
         sw_version = data.get("SoftwareVersion", "Unknown")
         hw_version = data.get("HardwareVersion", "Unknown")
-        serial = data.get("SerialNumber", "Unknown")
+        serial = data.get("SerialNumber") or entry.unique_id or entry.entry_id
 
         self._attr_name = f"Fiberhome {config['name']}"
         self._attr_unique_id = f"fiberhome_cpe_{serial}_{key}"
@@ -240,13 +240,13 @@ class FiberhomeCPESensor(CoordinatorEntity, SensorEntity):
 class FiberhomeCPESMSMessageSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Fiberhome CPE Latest Message Sensor."""
 
-    def __init__(self, coordinator):
+    def __init__(self, coordinator, entry):
         """Initialize the sensor."""
         super().__init__(coordinator)
         
         data = self.coordinator.data or {}
         model = data.get("ModelName", "Fiberhome 5G CPE")
-        serial = data.get("SerialNumber", "Unknown")
+        serial = data.get("SerialNumber") or entry.unique_id or entry.entry_id
 
         self._attr_name = "Fiberhome Latest Message"
         self._attr_unique_id = f"fiberhome_cpe_{serial}_latest_message"
