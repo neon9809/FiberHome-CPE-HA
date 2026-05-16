@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
-import requests
 import logging
+import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     DOMAIN,
@@ -42,9 +43,8 @@ class LoginThrottled(Exception):
     """Error to indicate login has been throttled."""
 
 
-def _validate_input(client, data: dict[str, Any]) -> dict[str, str]:
-    """Validate the user input allows us to connect."""
-    result = client.get_device_data(VALIDATION_NODES)
+async def _validate_input(client, data: dict[str, Any]) -> dict[str, str]:
+    result = await client.get_device_data(VALIDATION_NODES)
     if not result:
         raw_message = client.last_error or ""
         message = raw_message.lower()
@@ -64,12 +64,14 @@ def _validate_input(client, data: dict[str, Any]) -> dict[str, str]:
 class FiberhomeCPEConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Fiberhome CPE."""
 
-    VERSION = 1
+    VERSION = 2
+
+    def __init__(self) -> None:
+        self._reauth_entry: config_entries.ConfigEntry | None = None
 
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
         errors = {}
-        client = None
 
         if user_input is not None:
             try:
@@ -79,10 +81,9 @@ class FiberhomeCPEConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     user_input[CONF_HOST],
                     user_input[CONF_USERNAME],
                     user_input[CONF_PASSWORD],
+                    async_get_clientsession(self.hass),
                 )
-                info = await self.hass.async_add_executor_job(
-                    _validate_input, client, user_input
-                )
+                info = await _validate_input(client, user_input)
             except InvalidAuth:
                 errors["base"] = "auth"
             except AlreadyLoggedIn:
@@ -91,9 +92,10 @@ class FiberhomeCPEConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "login_throttled"
             except CannotConnect:
                 errors["base"] = "cannot_connect"
-            except requests.RequestException:
+            except (aiohttp.ClientError, TimeoutError):
                 errors["base"] = "cannot_connect"
             except Exception:
+                _LOGGER.exception("Unexpected error creating entry")
                 errors["base"] = "unknown"
             else:
                 await self.async_set_unique_id(info["serial"])
@@ -102,9 +104,6 @@ class FiberhomeCPEConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     "validated_clients", {}
                 )[info["serial"]] = client
                 return self.async_create_entry(title=info["title"], data=user_input)
-            finally:
-                if client is not None and errors:
-                    await self.hass.async_add_executor_job(client.close)
 
         data_schema = vol.Schema(
             {
@@ -124,6 +123,77 @@ class FiberhomeCPEConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user", data_schema=data_schema, errors=errors
         )
 
+    async def async_step_reauth(self, user_input: dict[str, Any]) -> dict[str, Any]:
+        entry_id = user_input.get("entry_id")
+        if entry_id:
+            self._reauth_entry = self.hass.config_entries.async_get_entry(entry_id)
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input=None) -> dict[str, Any]:
+        errors = {}
+        entry = self._reauth_entry
+        if entry is None:
+            return self.async_abort(reason="unknown")
+
+        if user_input is not None:
+            try:
+                from .api import FiberhomeCPEClient
+
+                client = FiberhomeCPEClient(
+                    entry.data[CONF_HOST],
+                    user_input[CONF_USERNAME],
+                    user_input[CONF_PASSWORD],
+                    async_get_clientsession(self.hass),
+                )
+                await _validate_input(
+                    client,
+                    {
+                        CONF_HOST: entry.data[CONF_HOST],
+                        CONF_USERNAME: user_input[CONF_USERNAME],
+                        CONF_PASSWORD: user_input[CONF_PASSWORD],
+                    },
+                )
+            except InvalidAuth:
+                errors["base"] = "auth"
+            except AlreadyLoggedIn:
+                errors["base"] = "already_logged_in"
+            except LoginThrottled:
+                errors["base"] = "login_throttled"
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except (aiohttp.ClientError, TimeoutError):
+                errors["base"] = "cannot_connect"
+            except Exception:
+                _LOGGER.exception("Unexpected error during reauth")
+                errors["base"] = "unknown"
+            else:
+                self.hass.config_entries.async_update_entry(
+                    entry,
+                    data={
+                        **dict(entry.data),
+                        CONF_USERNAME: user_input[CONF_USERNAME],
+                        CONF_PASSWORD: user_input[CONF_PASSWORD],
+                    },
+                )
+                if entry.unique_id:
+                    self.hass.data.setdefault(DOMAIN, {}).setdefault(
+                        "validated_clients", {}
+                    )[entry.unique_id] = client
+                return self.async_abort(reason="reauth_successful")
+
+        data_schema = vol.Schema(
+            {
+                vol.Required(CONF_USERNAME, default=entry.data.get(CONF_USERNAME, "")): str,
+                vol.Required(CONF_PASSWORD): str,
+            }
+        )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=data_schema,
+            errors=errors,
+        )
+
     @staticmethod
     @callback
     def async_get_options_flow(config_entry):
@@ -140,47 +210,9 @@ class FiberhomeCPEOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
-        errors = {}
-        client = None
-
         if user_input is not None:
-            try:
-                from .api import FiberhomeCPEClient
+            return self.async_create_entry(title="", data=user_input)
 
-                client = FiberhomeCPEClient(
-                    user_input[CONF_HOST],
-                    user_input[CONF_USERNAME],
-                    user_input[CONF_PASSWORD],
-                )
-                await self.hass.async_add_executor_job(_validate_input, client, user_input)
-            except InvalidAuth:
-                errors["base"] = "auth"
-            except AlreadyLoggedIn:
-                errors["base"] = "already_logged_in"
-            except LoginThrottled:
-                errors["base"] = "login_throttled"
-            except CannotConnect:
-                errors["base"] = "cannot_connect"
-            except requests.RequestException:
-                errors["base"] = "cannot_connect"
-            except Exception:
-                _LOGGER.exception("Unexpected error updating options")
-                errors["base"] = "unknown"
-            else:
-                return self.async_create_entry(title="", data=user_input)
-            finally:
-                if client is not None:
-                    await self.hass.async_add_executor_job(client.close)
-
-        host_default = self.config_entry.options.get(
-            CONF_HOST, self.config_entry.data.get(CONF_HOST, DEFAULT_HOST)
-        )
-        username_default = self.config_entry.options.get(
-            CONF_USERNAME, self.config_entry.data.get(CONF_USERNAME, "")
-        )
-        password_default = self.config_entry.options.get(
-            CONF_PASSWORD, self.config_entry.data.get(CONF_PASSWORD, "")
-        )
         refresh_default = self.config_entry.options.get(
             CONF_REFRESH_INTERVAL,
             self.config_entry.data.get(CONF_REFRESH_INTERVAL, DEFAULT_REFRESH_INTERVAL),
@@ -195,18 +227,6 @@ class FiberhomeCPEOptionsFlow(config_entries.OptionsFlow):
         data_schema = vol.Schema(
             {
                 vol.Required(
-                    CONF_HOST, 
-                    default=host_default
-                ): str,
-                vol.Required(
-                    CONF_USERNAME, 
-                    default=username_default
-                ): str,
-                vol.Required(
-                    CONF_PASSWORD, 
-                    default=password_default
-                ): str,
-                vol.Required(
                     CONF_REFRESH_INTERVAL,
                     default=refresh_default,
                 ): vol.All(int, vol.Range(min=MIN_REFRESH_INTERVAL, max=MAX_REFRESH_INTERVAL)),
@@ -220,5 +240,5 @@ class FiberhomeCPEOptionsFlow(config_entries.OptionsFlow):
         return self.async_show_form(
             step_id="init",
             data_schema=data_schema,
-            errors=errors,
+            errors={},
         )
