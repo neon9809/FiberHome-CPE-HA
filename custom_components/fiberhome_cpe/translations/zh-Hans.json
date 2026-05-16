@@ -1,0 +1,42 @@
+{
+  "title": "烽火 5G CPE",
+  "config": {
+    "step": {
+      "user": {
+        "title": "连接烽火 5G CPE",
+        "description": "输入烽火 5G CPE 设备的连接信息。",
+        "data": {
+          "host": "主机地址 (IP)",
+          "username": "用户名",
+          "password": "密码",
+          "refresh_interval": "刷新间隔 (秒)",
+          "enable_latest_message": "启用最新短信传感器"
+        }
+      }
+    },
+    "error": {
+      "auth": "认证失败",
+      "already_logged_in": "设备提示已有用户在其他地方登录",
+      "cannot_connect": "无法连接到设备",
+      "login_throttled": "登录失败次数过多，请稍后再试",
+      "unknown": "未知错误"
+    },
+    "abort": {
+      "already_configured": "设备已配置"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "配置烽火 5G CPE 选项",
+        "data": {
+          "host": "主机地址 (IP)",
+          "username": "用户名",
+          "password": "密码",
+          "refresh_interval": "刷新间隔 (秒)",
+          "enable_latest_message": "启用最新短信传感器"
+        }
+      }
+    }
+  }
+}

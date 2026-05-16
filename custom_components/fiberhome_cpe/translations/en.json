@@ -1,0 +1,42 @@
+{
+  "title": "Fiberhome 5G CPE",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to Fiberhome 5G CPE",
+        "description": "Enter the connection details for your Fiberhome 5G CPE.",
+        "data": {
+          "host": "Host (IP Address)",
+          "username": "Username",
+          "password": "Password",
+          "refresh_interval": "Refresh Interval (seconds)",
+          "enable_latest_message": "Enable Latest SMS Message Sensor"
+        }
+      }
+    },
+    "error": {
+      "auth": "Authentication failed",
+      "already_logged_in": "Another user is already logged in on the device",
+      "cannot_connect": "Failed to connect to the device",
+      "login_throttled": "Too many failed login attempts, please try again later",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "Device is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Configure Fiberhome 5G CPE Options",
+        "data": {
+          "host": "Host (IP Address)",
+          "username": "Username",
+          "password": "Password",
+          "refresh_interval": "Refresh Interval (seconds)",
+          "enable_latest_message": "Enable Latest SMS Message Sensor"
+        }
+      }
+    }
+  }
+}

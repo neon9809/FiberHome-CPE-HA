@@ -1,0 +1,12 @@
+{
+  "domain": "fiberhome_cpe",
+  "name": "Fiberhome CPE",
+  "codeowners": ["@neon9809"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/neon9809/fiberhome-cpe-ha",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/neon9809/fiberhome-cpe-ha/issues",
+  "requirements": [],
+  "version": "1.0.0"
+}

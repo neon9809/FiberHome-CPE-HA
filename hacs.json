@@ -1,0 +1,6 @@
+{
+  "name": "Fiberhome 5G CPE",
+  "render_readme": true,
+  "iot_class": "local_polling",
+  "homeassistant": "2023.8.0"
+}
