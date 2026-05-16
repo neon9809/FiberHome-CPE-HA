@@ -1,54 +1,67 @@
 # FiberHome-CPE-HA
 
-`FiberHome-CPE-HA` is a custom integration for Home Assistant that connects to Fiberhome 5G CPE devices, synchronizing device status, network signal, traffic statistics, and the latest SMS as Home Assistant sensors.
+[English version](README_en.md)
 
-## Features
+`FiberHome-CPE-HA` 是一个用于 Home Assistant 的自定义集成，用来接入烽火 5G CPE 设备，并把设备状态、网络信号、流量统计以及最新短信同步为 Home Assistant 传感器。
 
-- Automatically logs into the CPE and retrieves basic device information
-- Exposes system status sensors such as temperature, CPU, memory, and uptime
-- Exposes signal sensors such as RSRP, RSSI, SINR, RSRQ, BAND, and PCI
-- Exposes today's and this month's upload/download traffic sensors
-- Optionally enables the `Latest Message` sensor
-- Upon discovering a new SMS, reads the latest message content and automatically marks it as read
+## 功能特性
 
-## Configuration
+- 自动登录 CPE 并获取设备基础信息
+- 暴露温度、CPU、内存、运行时间等系统状态传感器
+- 暴露 RSRP、RSSI、SINR、RSRQ、BAND、PCI 等信号传感器
+- 暴露今日和本月上传下载流量传感器
+- 可选启用 `Latest Message` 传感器
+- 发现新短信后读取最新短信内容并自动标记为已读
 
-When adding the integration in Home Assistant, the following fields need to be filled in:
+## 配置项
 
-- Username
-- Password
-- Refresh Interval
-- Enable `Latest Message`
+在 Home Assistant 添加集成时，需要填写以下内容：
 
-The default refresh interval is `60` seconds, with a configurable range from `1` to `21600` seconds.
+- 用户名
+- 密码
+- 刷新间隔
+- 是否启用 `Latest Message`
 
-## Installation
+其中刷新间隔默认 `60` 秒，可配置范围为 `1` 到 `21600` 秒。
 
-1. Copy the `custom_components/fiberhome_cpe` directory to the `custom_components` directory within your Home Assistant configuration directory
-2. The final path should be `config/custom_components/fiberhome_cpe/`
-3. Restart Home Assistant
-4. Navigate to "Settings -> Devices & Services -> Add Integration"
-5. Search for `Fiberhome CPE`
+## 安装方式
 
-## Data Source
+### 通过 HACS 安装（推荐）
 
-This project references the `obtainData.py` file in the repository, using the same session acquisition, AES encryption/decryption, and API request methods to access the CPE.
+1. 在 Home Assistant 中打开 `HACS`
+2. 点击右上角的菜单并选择 `Custom repositories`
+3. 添加仓库地址：`https://github.com/neon9809/FiberHome-CPE-HA`
+4. 选择类别：`integration`
+5. 添加后进入 `HACS -> Integrations`
+6. 搜索 `Fiberhome CPE` 并安装
 
-SMS reading logic references:
+### 手动安装
+
+1. 将 `custom_components/fiberhome_cpe` 目录复制到 Home Assistant 配置目录下的 `custom_components` 目录中
+2. 最终路径应为 `config/custom_components/fiberhome_cpe/`
+3. 重启 Home Assistant
+4. 进入“设置 -> 设备与服务 -> 添加集成”
+5. 搜索 `Fiberhome CPE`
+
+## 数据来源
+
+本项目参考了仓库中的 `obtainData.py`，使用相同的会话获取、AES 加解密和接口请求方式访问 CPE。
+
+短信读取逻辑参考：
 
 - [fiberhome-cpe-sms](https://gitee.com/upchr/fiberhome-cpe-sms)
 - [fiberhome-cpe](https://github.com/kukume/fiberhome-cpe)
 
 ## Credit
 
-- Project Homepage: [neon9809](https://github.com/neon9809)
-- Prompt Objective Summary:
-  - Develop a Home Assistant custom plugin by referencing the methods in `obtainData.py`
-  - After configuration, automatically fetch data from the CPE and write it to Home Assistant sensors
-  - Design a `Latest Message` sensor to read the most recent SMS
-  - The sensor content must include the sender and message content
-  - Automatically mark the SMS as read after retrieval
-  - The `config_flow` supports username, password, refresh interval, and whether to enable the SMS sensor
-  - Default refresh interval is `60` seconds, with an allowed range of `1` to `21600` seconds
+- 项目主页: [neon9809](https://github.com/neon9809)
+- 提示词目标总结:
+  - 参考 `obtainData.py` 的方法开发一个 Home Assistant 自定义插件
+  - 配置后自动从 CPE 获取数据并写入 Home Assistant 传感器
+  - 设计一个 `Latest Message` 传感器，读取最新一条短信
+  - 传感器内容需要包含发件人和短信内容
+  - 获取后自动将该短信标记为已读
+  - `config_flow` 中支持用户名、密码、刷新间隔和是否启用短信传感器
+  - 刷新间隔默认 `60` 秒，允许范围 `1` 到 `21600` 秒
 
-I proudly declare: this project was completed by Trae Agent with the Gemini 3.1 Pro model.
+我自豪地声明：本项目由 Trae Agent 与 Gemini 3.1 Pro 模型完成。

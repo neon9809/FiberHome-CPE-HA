@@ -4,9 +4,9 @@
   "codeowners": ["@neon9809"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/neon9809/fiberhome-cpe-ha",
+  "documentation": "https://github.com/neon9809/FiberHome-CPE-HA",
   "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/neon9809/fiberhome-cpe-ha/issues",
+  "issue_tracker": "https://github.com/neon9809/FiberHome-CPE-HA/issues",
   "requirements": [],
   "version": "1.0.0"
 }
