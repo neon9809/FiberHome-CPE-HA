@@ -8,17 +8,19 @@
 - Exposes system status sensors such as temperature, CPU, memory, and uptime
 - Exposes signal sensors such as RSRP, RSSI, SINR, RSRQ, BAND, and PCI
 - Exposes today's and this month's upload/download traffic sensors
-- Optionally enables the `Latest Message` sensor
-- Upon discovering a new SMS, reads the latest message content and automatically marks it as read
+- Optionally enables SMS-related entities: `Latest Message`, `Unread SMS`, and `New SMS`
+- Does not automatically mark SMS messages as read (avoids side effects on the device)
+- Provides IMEI/IMSI diagnostic sensors (disabled by default)
 
 ## Configuration
 
 When adding the integration in Home Assistant, the following fields need to be filled in:
 
+- Host (IP Address)
 - Username
 - Password
 - Refresh Interval
-- Enable `Latest Message`
+- Enable SMS entities
 
 The default refresh interval is `60` seconds, with a configurable range from `1` to `21600` seconds.
 
@@ -53,13 +55,3 @@ SMS reading logic references:
 ## Credit
 
 - Project Homepage: [neon9809](https://github.com/neon9809)
-- Prompt Objective Summary:
-  - Develop a Home Assistant custom plugin by referencing the methods in `obtainData.py`
-  - After configuration, automatically fetch data from the CPE and write it to Home Assistant sensors
-  - Design a `Latest Message` sensor to read the most recent SMS
-  - The sensor content must include the sender and message content
-  - Automatically mark the SMS as read after retrieval
-  - The `config_flow` supports username, password, refresh interval, and whether to enable the SMS sensor
-  - Default refresh interval is `60` seconds, with an allowed range of `1` to `21600` seconds
-
-I proudly declare: this project was completed by Trae Agent with the Gemini 3.1 Pro model.
