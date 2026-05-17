@@ -26,7 +26,7 @@ The default refresh interval is `60` seconds, with a configurable range from `1`
 
 ## Installation
 
-### Install via HACS (recommended)
+### Install via a HACS custom repository (recommended)
 
 1. In Home Assistant, open `HACS`
 2. Click the menu in the top right and select `Custom repositories`
@@ -45,7 +45,7 @@ The default refresh interval is `60` seconds, with a configurable range from `1`
 
 ## Data Source
 
-This project references the `obtainData.py` file in the repository, using the same session acquisition, AES encryption/decryption, and API request methods to access the CPE.
+This project is based on analysis of the Fiberhome CPE web interface and follows the same general approach for session handling, AES encryption/decryption, and API requests.
 
 SMS reading logic references:
 
