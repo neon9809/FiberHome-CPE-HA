@@ -300,18 +300,22 @@ class FiberhomeCPEClient:
             or {}
         )
 
+    async def get_header_info(self) -> dict[str, Any]:
+        try:
+            result = await self._request_get("/api/tmp/FHAPIS?ajaxmethod=get_header_info")
+            data = json.loads(result) if result else {}
+            return data if isinstance(data, dict) else {}
+        except Exception as err:
+            _LOGGER.debug("get_header_info failed: %s", err)
+            self.last_error = str(err)
+            return {}
+
     async def get_new_sms_flag(self) -> bool:
         if not await self.ensure_login():
             return False
 
-        try:
-            result = await self._request_get("/api/tmp/FHAPIS?ajaxmethod=get_header_info")
-            data = json.loads(result)
-            return str(data.get("new_sms_flag", "false")).lower() == "true"
-        except Exception as err:
-            _LOGGER.debug("get_new_sms_flag failed: %s", err)
-            self.last_error = str(err)
-            return False
+        data = await self.get_header_info()
+        return str(data.get("new_sms_flag", "false")).lower() == "true"
 
     async def get_unread_sms(self) -> list[dict[str, str]]:
         if not await self.ensure_login():
