@@ -19,6 +19,12 @@ from .const import DOMAIN, CONF_ENABLE_LATEST_MESSAGE, DEFAULT_ENABLE_LATEST_MES
 
 _LOGGER = logging.getLogger(__name__)
 
+
+def _to_int_or_none(value):
+    if value in (None, ""):
+        return None
+    return int(value)
+
 SENSOR_TYPES = {
     "Modem5GTemperature": {
         "name": "5G Modem Temperature",
@@ -171,6 +177,108 @@ SENSOR_TYPES = {
         "unit": None,
         "icon": "mdi:domain",
         "transform": lambda x: x
+    },
+    "OnlineDevNum": {
+        "name": "Online Devices",
+        "device_class": None,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": None,
+        "icon": "mdi:devices",
+        "transform": _to_int_or_none,
+    },
+    "SignalLevel": {
+        "name": "Signal Level",
+        "device_class": None,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": None,
+        "icon": "mdi:signal",
+        "transform": _to_int_or_none,
+    },
+    "SPN": {
+        "name": "Service Provider",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:cellphone-text",
+        "transform": lambda x: x,
+    },
+    "Totalmessage": {
+        "name": "SMS Stored",
+        "device_class": None,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": None,
+        "icon": "mdi:message-badge",
+        "transform": _to_int_or_none,
+    },
+    "TotalBytesSent": {
+        "name": "Header Upload Total",
+        "device_class": SensorDeviceClass.DATA_SIZE,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfInformation.BYTES,
+        "icon": "mdi:upload-network",
+        "transform": _to_int_or_none,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "TotalBytesReceived": {
+        "name": "Header Download Total",
+        "device_class": SensorDeviceClass.DATA_SIZE,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfInformation.BYTES,
+        "icon": "mdi:download-network",
+        "transform": _to_int_or_none,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "PhoneNumber": {
+        "name": "Phone Number",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:phone",
+        "transform": lambda x: x,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "SIMPlmn": {
+        "name": "SIM PLMN",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:sim",
+        "transform": lambda x: x,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "WanInterface": {
+        "name": "WAN Interface",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:ethernet",
+        "transform": lambda x: x,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "RegisterStatus": {
+        "name": "Register Status",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:cellphone-check",
+        "transform": lambda x: x,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "CarrierSerialNum": {
+        "name": "Carrier Serial Number",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:identifier",
+        "transform": lambda x: x,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
     },
     "IMEI": {
         "name": "IMEI",

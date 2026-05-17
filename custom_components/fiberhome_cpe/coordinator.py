@@ -31,12 +31,14 @@ class FiberhomeCPECoordinator(DataUpdateCoordinator):
             sim_info = await self.client.get_sim_info()
             signal_info = await self.client.get_signal_info()
             traffic_stats = await self.client.get_traffic_stats()
+            header_info = await self.client.get_header_info()
 
             data = {}
             data.update(details or {})
             data.update(sim_info or {})
             data.update(signal_info or {})
             data.update(traffic_stats or {})
+            data.update(header_info or {})
 
             if not data:
                 raise UpdateFailed("Error fetching device data")
@@ -50,7 +52,7 @@ class FiberhomeCPECoordinator(DataUpdateCoordinator):
                     data['MemoryUsage'] = None
                     
             if self.enable_sms:
-                data["sms_new_flag"] = await self.client.get_new_sms_flag()
+                data["sms_new_flag"] = str(data.get("new_sms_flag", "false")).lower() == "true"
                 sms_list = await self.client.get_unread_sms()
                 data["sms_unread_count"] = len(sms_list)
                 data["sms_has_unread"] = len(sms_list) > 0
