@@ -1,6 +1,5 @@
 {
   "name": "FiberHome CPE",
   "render_readme": true,
-  "iot_class": "local_polling",
   "homeassistant": "2026.1.0"
 }
