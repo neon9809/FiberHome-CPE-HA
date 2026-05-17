@@ -206,20 +206,20 @@ class FiberhomeCPEOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
         """Initialize options flow."""
-        super().__init__(config_entry)
+        self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
 
-        refresh_default = self.config_entry.options.get(
+        refresh_default = self._config_entry.options.get(
             CONF_REFRESH_INTERVAL,
-            self.config_entry.data.get(CONF_REFRESH_INTERVAL, DEFAULT_REFRESH_INTERVAL),
+            self._config_entry.data.get(CONF_REFRESH_INTERVAL, DEFAULT_REFRESH_INTERVAL),
         )
-        enable_sms_default = self.config_entry.options.get(
+        enable_sms_default = self._config_entry.options.get(
             CONF_ENABLE_LATEST_MESSAGE,
-            self.config_entry.data.get(
+            self._config_entry.data.get(
                 CONF_ENABLE_LATEST_MESSAGE, DEFAULT_ENABLE_LATEST_MESSAGE
             ),
         )
