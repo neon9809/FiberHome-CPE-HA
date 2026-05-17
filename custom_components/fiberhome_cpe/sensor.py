@@ -11,12 +11,19 @@ from homeassistant.const import (
     UnitOfTime,
     PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+    EntityCategory,
 )
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, CONF_ENABLE_LATEST_MESSAGE, DEFAULT_ENABLE_LATEST_MESSAGE
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def _to_int_or_none(value):
+    if value in (None, ""):
+        return None
+    return int(value)
 
 SENSOR_TYPES = {
     "Modem5GTemperature": {
@@ -170,6 +177,128 @@ SENSOR_TYPES = {
         "unit": None,
         "icon": "mdi:domain",
         "transform": lambda x: x
+    },
+    "OnlineDevNum": {
+        "name": "Online Devices",
+        "device_class": None,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": None,
+        "icon": "mdi:devices",
+        "transform": _to_int_or_none,
+    },
+    "SignalLevel": {
+        "name": "Signal Level",
+        "device_class": None,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": None,
+        "icon": "mdi:signal",
+        "transform": _to_int_or_none,
+    },
+    "SPN": {
+        "name": "Service Provider",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:cellphone-text",
+        "transform": lambda x: x,
+    },
+    "Totalmessage": {
+        "name": "SMS Stored",
+        "device_class": None,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "unit": None,
+        "icon": "mdi:message-badge",
+        "transform": _to_int_or_none,
+    },
+    "TotalBytesSent": {
+        "name": "Header Upload Total",
+        "device_class": SensorDeviceClass.DATA_SIZE,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfInformation.BYTES,
+        "icon": "mdi:upload-network",
+        "transform": _to_int_or_none,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "TotalBytesReceived": {
+        "name": "Header Download Total",
+        "device_class": SensorDeviceClass.DATA_SIZE,
+        "state_class": SensorStateClass.TOTAL_INCREASING,
+        "unit": UnitOfInformation.BYTES,
+        "icon": "mdi:download-network",
+        "transform": _to_int_or_none,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "PhoneNumber": {
+        "name": "Phone Number",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:phone",
+        "transform": lambda x: x,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "SIMPlmn": {
+        "name": "SIM PLMN",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:sim",
+        "transform": lambda x: x,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "WanInterface": {
+        "name": "WAN Interface",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:ethernet",
+        "transform": lambda x: x,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "RegisterStatus": {
+        "name": "Register Status",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:cellphone-check",
+        "transform": lambda x: x,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "CarrierSerialNum": {
+        "name": "Carrier Serial Number",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:identifier",
+        "transform": lambda x: x,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "IMEI": {
+        "name": "IMEI",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:identifier",
+        "transform": lambda x: x,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
+    },
+    "IMSI": {
+        "name": "IMSI",
+        "device_class": None,
+        "state_class": None,
+        "unit": None,
+        "icon": "mdi:identifier",
+        "transform": lambda x: x,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "enabled_default": False,
     }
 }
 
@@ -181,7 +310,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     
     # Create sensors for each tracked data point
     for key, config in SENSOR_TYPES.items():
-        sensors.append(FiberhomeCPESensor(coordinator, key, config))
+        sensors.append(FiberhomeCPESensor(coordinator, entry, key, config))
 
     # Add the latest message sensor if enabled
     enable_sms = entry.options.get(
@@ -189,7 +318,8 @@ async def async_setup_entry(hass, entry, async_add_entities):
         entry.data.get(CONF_ENABLE_LATEST_MESSAGE, DEFAULT_ENABLE_LATEST_MESSAGE)
     )
     if enable_sms:
-        sensors.append(FiberhomeCPESMSMessageSensor(coordinator))
+        sensors.append(FiberhomeCPESMSMessageSensor(coordinator, entry))
+        sensors.append(FiberhomeCPESMSUnreadCountSensor(coordinator, entry))
 
     async_add_entities(sensors, True)
 
@@ -197,7 +327,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
 class FiberhomeCPESensor(CoordinatorEntity, SensorEntity):
     """Representation of a Fiberhome CPE Sensor."""
 
-    def __init__(self, coordinator, key, config):
+    def __init__(self, coordinator, entry, key, config):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._key = key
@@ -208,7 +338,7 @@ class FiberhomeCPESensor(CoordinatorEntity, SensorEntity):
         model = data.get("ModelName", "Fiberhome 5G CPE")
         sw_version = data.get("SoftwareVersion", "Unknown")
         hw_version = data.get("HardwareVersion", "Unknown")
-        serial = data.get("SerialNumber", "Unknown")
+        serial = data.get("SerialNumber") or entry.unique_id or entry.entry_id
 
         self._attr_name = f"Fiberhome {config['name']}"
         self._attr_unique_id = f"fiberhome_cpe_{serial}_{key}"
@@ -224,6 +354,8 @@ class FiberhomeCPESensor(CoordinatorEntity, SensorEntity):
         self._attr_state_class = config.get("state_class")
         self._attr_native_unit_of_measurement = config.get("unit")
         self._attr_icon = config.get("icon")
+        self._attr_entity_category = config.get("entity_category")
+        self._attr_entity_registry_enabled_default = config.get("enabled_default", True)
 
     @property
     def native_value(self):
@@ -240,13 +372,13 @@ class FiberhomeCPESensor(CoordinatorEntity, SensorEntity):
 class FiberhomeCPESMSMessageSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Fiberhome CPE Latest Message Sensor."""
 
-    def __init__(self, coordinator):
+    def __init__(self, coordinator, entry):
         """Initialize the sensor."""
         super().__init__(coordinator)
         
         data = self.coordinator.data or {}
         model = data.get("ModelName", "Fiberhome 5G CPE")
-        serial = data.get("SerialNumber", "Unknown")
+        serial = data.get("SerialNumber") or entry.unique_id or entry.entry_id
 
         self._attr_name = "Fiberhome Latest Message"
         self._attr_unique_id = f"fiberhome_cpe_{serial}_latest_message"
@@ -266,7 +398,7 @@ class FiberhomeCPESMSMessageSensor(CoordinatorEntity, SensorEntity):
         sms = self.coordinator.data.get("latest_sms")
         if sms:
             return sms.get("phone", "Unknown")
-        return "None"
+        return None
 
     @property
     def extra_state_attributes(self):
@@ -281,3 +413,29 @@ class FiberhomeCPESMSMessageSensor(CoordinatorEntity, SensorEntity):
                 "id": sms.get("id", "")
             }
         return {}
+
+
+class FiberhomeCPESMSUnreadCountSensor(CoordinatorEntity, SensorEntity):
+    def __init__(self, coordinator, entry):
+        super().__init__(coordinator)
+
+        data = self.coordinator.data or {}
+        model = data.get("ModelName", "Fiberhome 5G CPE")
+        serial = data.get("SerialNumber") or entry.unique_id or entry.entry_id
+
+        self._attr_name = "Fiberhome Unread SMS"
+        self._attr_unique_id = f"fiberhome_cpe_{serial}_sms_unread_count"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, serial)},
+            "name": model,
+            "manufacturer": "Fiberhome",
+            "model": model,
+        }
+        self._attr_icon = "mdi:email"
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+
+    @property
+    def native_value(self):
+        if not self.coordinator.data:
+            return None
+        return self.coordinator.data.get("sms_unread_count")

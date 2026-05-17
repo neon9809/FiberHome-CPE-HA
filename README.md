@@ -10,17 +10,19 @@
 - 暴露温度、CPU、内存、运行时间等系统状态传感器
 - 暴露 RSRP、RSSI、SINR、RSRQ、BAND、PCI 等信号传感器
 - 暴露今日和本月上传下载流量传感器
-- 可选启用 `Latest Message` 传感器
-- 发现新短信后读取最新短信内容并自动标记为已读
+- 可选启用短信相关实体：`Latest Message`、`Unread SMS`、`New SMS`
+- 不会自动把短信标记为已读（避免对设备产生副作用）
+- 额外提供 IMEI/IMSI 诊断传感器（默认禁用）
 
 ## 配置项
 
 在 Home Assistant 添加集成时，需要填写以下内容：
 
+- 主机地址 (IP)
 - 用户名
 - 密码
 - 刷新间隔
-- 是否启用 `Latest Message`
+- 是否启用短信相关实体
 
 其中刷新间隔默认 `60` 秒，可配置范围为 `1` 到 `21600` 秒。
 
@@ -55,13 +57,3 @@
 ## Credit
 
 - 项目主页: [neon9809](https://github.com/neon9809)
-- 提示词目标总结:
-  - 参考 `obtainData.py` 的方法开发一个 Home Assistant 自定义插件
-  - 配置后自动从 CPE 获取数据并写入 Home Assistant 传感器
-  - 设计一个 `Latest Message` 传感器，读取最新一条短信
-  - 传感器内容需要包含发件人和短信内容
-  - 获取后自动将该短信标记为已读
-  - `config_flow` 中支持用户名、密码、刷新间隔和是否启用短信传感器
-  - 刷新间隔默认 `60` 秒，允许范围 `1` 到 `21600` 秒
-
-我自豪地声明：本项目由 Trae Agent 与 Gemini 3.1 Pro 模型完成。

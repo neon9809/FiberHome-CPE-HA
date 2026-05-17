@@ -12,6 +12,14 @@
           "refresh_interval": "刷新间隔 (秒)",
           "enable_latest_message": "启用最新短信传感器"
         }
+      },
+      "reauth_confirm": {
+        "title": "重新认证烽火 5G CPE",
+        "description": "更新此设备的用户名和密码。",
+        "data": {
+          "username": "用户名",
+          "password": "密码"
+        }
       }
     },
     "error": {
@@ -22,7 +30,8 @@
       "unknown": "未知错误"
     },
     "abort": {
-      "already_configured": "设备已配置"
+      "already_configured": "设备已配置",
+      "reauth_successful": "重新认证成功"
     }
   },
   "options": {
@@ -30,9 +39,6 @@
       "init": {
         "title": "配置烽火 5G CPE 选项",
         "data": {
-          "host": "主机地址 (IP)",
-          "username": "用户名",
-          "password": "密码",
           "refresh_interval": "刷新间隔 (秒)",
           "enable_latest_message": "启用最新短信传感器"
         }

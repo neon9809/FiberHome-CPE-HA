@@ -2,6 +2,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.core import HomeAssistant
 from homeassistant.const import Platform
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
     DOMAIN,
@@ -16,16 +17,35 @@ from .const import (
 from .api import FiberhomeCPEClient
 from .coordinator import FiberhomeCPECoordinator
 
-PLATFORMS: list[Platform] = [Platform.SENSOR]
+PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.BINARY_SENSOR]
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    if entry.version >= 2:
+        return True
+
+    data = dict(entry.data)
+    options = dict(entry.options)
+
+    if CONF_REFRESH_INTERVAL in data and CONF_REFRESH_INTERVAL not in options:
+        options[CONF_REFRESH_INTERVAL] = data[CONF_REFRESH_INTERVAL]
+    if CONF_ENABLE_LATEST_MESSAGE in data and CONF_ENABLE_LATEST_MESSAGE not in options:
+        options[CONF_ENABLE_LATEST_MESSAGE] = data[CONF_ENABLE_LATEST_MESSAGE]
+
+    options.pop(CONF_HOST, None)
+    options.pop(CONF_USERNAME, None)
+    options.pop(CONF_PASSWORD, None)
+
+    hass.config_entries.async_update_entry(entry, data=data, options=options, version=2)
+    return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Fiberhome CPE from a config entry."""
     domain_data = hass.data.setdefault(DOMAIN, {})
     validated_clients = domain_data.setdefault("validated_clients", {})
 
-    host = entry.options.get(CONF_HOST, entry.data.get(CONF_HOST))
-    username = entry.options.get(CONF_USERNAME, entry.data.get(CONF_USERNAME))
-    password = entry.options.get(CONF_PASSWORD, entry.data.get(CONF_PASSWORD))
+    host = entry.data.get(CONF_HOST) or entry.options.get(CONF_HOST)
+    username = entry.data.get(CONF_USERNAME) or entry.options.get(CONF_USERNAME)
+    password = entry.data.get(CONF_PASSWORD) or entry.options.get(CONF_PASSWORD)
     
     refresh_interval = entry.options.get(
         CONF_REFRESH_INTERVAL, 
@@ -36,9 +56,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.data.get(CONF_ENABLE_LATEST_MESSAGE, DEFAULT_ENABLE_LATEST_MESSAGE)
     )
 
-    client = validated_clients.pop(entry.unique_id, None)
+    client = validated_clients.pop(entry.unique_id, None) if entry.unique_id else None
     if client is None:
-        client = FiberhomeCPEClient(host, username, password)
+        client = FiberhomeCPEClient(host, username, password, async_get_clientsession(hass))
+    else:
+        client.update_host(host)
+        client.update_credentials(username, password)
     
     coordinator = FiberhomeCPECoordinator(
         hass=hass,
@@ -51,7 +74,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await coordinator.async_config_entry_first_refresh()
     except Exception as err:
         message = str(err).lower()
-        if "password" in message or "auth" in message:
+        if "password" in message or "auth" in message or "用户名或密码错误" in str(err):
             raise ConfigEntryAuthFailed from err
         raise ConfigEntryNotReady from err
 
@@ -68,7 +91,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         coordinator = hass.data[DOMAIN].pop(entry.entry_id)
-        await hass.async_add_executor_job(coordinator.client.close)
+        await coordinator.client.async_close()
 
     return unload_ok
 

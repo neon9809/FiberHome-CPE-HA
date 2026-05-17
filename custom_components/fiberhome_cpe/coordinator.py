@@ -15,7 +15,7 @@ class FiberhomeCPECoordinator(DataUpdateCoordinator):
         """Initialize."""
         self.client = client
         self.enable_sms = enable_sms
-        self.latest_sms = None
+        self.latest_sms: dict[str, str] | None = None
         
         super().__init__(
             hass,
@@ -27,21 +27,22 @@ class FiberhomeCPECoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Update data via library."""
         try:
-            details = await self.hass.async_add_executor_job(self.client.get_device_details)
-            sim_info = await self.hass.async_add_executor_job(self.client.get_sim_info)
-            signal_info = await self.hass.async_add_executor_job(self.client.get_signal_info)
-            traffic_stats = await self.hass.async_add_executor_job(self.client.get_traffic_stats)
+            details = await self.client.get_device_details()
+            sim_info = await self.client.get_sim_info()
+            signal_info = await self.client.get_signal_info()
+            traffic_stats = await self.client.get_traffic_stats()
+            header_info = await self.client.get_header_info()
 
             data = {}
             data.update(details or {})
             data.update(sim_info or {})
             data.update(signal_info or {})
             data.update(traffic_stats or {})
+            data.update(header_info or {})
 
             if not data:
                 raise UpdateFailed("Error fetching device data")
 
-            # Calculate Memory Usage
             if data.get('MemoryTotal') and data.get('MemoryFree'):
                 try:
                     total = float(data['MemoryTotal'])
@@ -51,20 +52,17 @@ class FiberhomeCPECoordinator(DataUpdateCoordinator):
                     data['MemoryUsage'] = None
                     
             if self.enable_sms:
-                # Check for new SMS
-                has_new_sms = await self.hass.async_add_executor_job(self.client.get_new_sms_flag)
-                if has_new_sms:
-                    sms_list = await self.hass.async_add_executor_job(self.client.get_unread_sms)
-                    if sms_list:
-                        # Sort to get the latest one, assuming ID or time can determine it
-                        # The last in the list or highest ID is usually the latest
-                        for sms in sms_list:
-                            self.latest_sms = sms
-                            _LOGGER.info("New SMS received from %s", sms.get('phone'))
-                            # Mark as read
-                            await self.hass.async_add_executor_job(self.client.mark_sms_read, sms.get('id'))
-
-            data['latest_sms'] = self.latest_sms
+                data["sms_new_flag"] = str(data.get("new_sms_flag", "false")).lower() == "true"
+                sms_list = await self.client.get_unread_sms()
+                data["sms_unread_count"] = len(sms_list)
+                data["sms_has_unread"] = len(sms_list) > 0
+                if sms_list:
+                    self.latest_sms = sms_list[-1]
+                data["latest_sms"] = self.latest_sms
+            else:
+                data["sms_unread_count"] = 0
+                data["sms_has_unread"] = False
+                data["latest_sms"] = None
             return data
 
         except Exception as exception:
